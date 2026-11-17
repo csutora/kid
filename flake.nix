@@ -10,12 +10,12 @@
       systems = [ "aarch64-darwin" ];
       forAll = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
-      version = "0.2.0";
+      version = "0.2.1";
 
       # the release tarball holds an app bundle signed with a stable identity, so
       # macos keeps the accessibility and input monitoring grants across updates
       url = "https://github.com/csutora/kid/releases/download/v${version}/kid-${version}-aarch64-darwin.tar.gz";
-      hash = "sha256-9jAF/x9JCLOXmLpX9ZtymvlZLo4qSuuIM3gtG9va7Gs=";
+      hash = "sha256-zoLcc9pNCNuWxxTKB4PL/hQo0rjxYf461AXR6xkqg3Y=";
 
       mkKid = pkgs: pkgs.stdenv.mkDerivation {
         pname = "kid";

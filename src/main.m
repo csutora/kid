@@ -1,4 +1,8 @@
 #import <Foundation/Foundation.h>
+#include <spawn.h>
+#include <sys/wait.h>
+
+extern char **environ;
 
 #import "config.h"
 #import "daemon.h"
@@ -10,11 +14,12 @@ static const char *usage =
     "\n"
     "usage:\n"
     "  kid daemon [--config <path>]   run the daemon\n"
+    "  kid restart                    restart the daemon started by launchd\n"
     "  kid check [<path>]             validate a config file\n"
     "  kid led [on|off|auto]          show or set the caps lock led override\n"
     "  kid led flash [--times <n>] [--speed <x>]\n"
-    "                                   flash the led, then return to its state.\n"
-    "                                   defaults to 2 times at speed 1\n"
+    "                                 flash the led, then return to its state.\n"
+    "                                 defaults to 2 times at speed 1\n"
     "  kid version                    print the version\n"
     "\n"
     "the config defaults to ~/.config/kid/config.json\n";
@@ -48,6 +53,22 @@ static NSString *flash_request(NSArray<NSString *> *args) {
         }
     }
     return [NSString stringWithFormat:@"led flash %ld %g", times, speed];
+}
+
+static int restart(void) {
+    NSString *target = [NSString stringWithFormat:@"gui/%u/com.csutora.kid", getuid()];
+    char *argv[] = {"/bin/launchctl", "kickstart", "-k", (char *)target.UTF8String, NULL};
+    pid_t pid;
+    int status;
+    if (posix_spawn(&pid, argv[0], NULL, NULL, argv, environ) || waitpid(pid, &status, 0) < 0) {
+        fprintf(stderr, "kid: could not run launchctl\n");
+        return 1;
+    }
+    if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+        fprintf(stderr, "kid: launchctl could not restart %s, is the launchd agent installed?\n", target.UTF8String);
+        return 1;
+    }
+    return 0;
 }
 
 static int led(NSArray<NSString *> *args) {
@@ -92,6 +113,10 @@ int main(int argc, char **argv) {
             if (args.count == 2 && [args[0] isEqualToString:@"--config"]) return daemon_main(args[1], false);
             if (args.count) return fail_usage();
             return daemon_main(kid_config.default_path, true);
+        }
+        if ([command isEqualToString:@"restart"]) {
+            if (args.count) return fail_usage();
+            return restart();
         }
         if ([command isEqualToString:@"check"]) {
             if (args.count > 1) return fail_usage();

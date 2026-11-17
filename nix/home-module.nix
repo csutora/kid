@@ -74,9 +74,6 @@ in
           "${configFile}"
         ];
         RunAtLoad = true;
-        KeepAlive = {
-          SuccessfulExit = false;
-        };
         ProcessType = "Interactive";
         StandardOutPath = "${config.home.homeDirectory}/Library/Logs/kid.log";
         StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/kid.log";

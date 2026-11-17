@@ -96,7 +96,7 @@ kid needs two permissions, under system settings > privacy & security:
 - **input monitoring**, to tell caps lock apart from the escape key. macos asks for this on first start
 - **device control and data access** (called accessibility before macos 27), to modify key events. macos doesn't ask for this one for background agents, so add it by hand: click `+`, press cmd+shift+g, and open `~/Applications/kid.app`
 
-macos only applies these to kid after a restart, so once both are granted, run `launchctl kickstart -k gui/$(id -u)/com.csutora.kid`.
+macos only applies new permissions to kid after a restart, so once both are granted, run `kid restart`.
 
 ## configuration
 
@@ -132,6 +132,7 @@ the override applies to every keyboard with a caps lock led, including ones conn
 **caps lock does nothing or types escape only**
 - check that kid is allowed in system settings > privacy & security > input monitoring and device control and data access
 - check the logs at `~/Library/Logs/kid.log`
+- after granting permissions, run `kid restart`
 
 **caps lock is still escape after disabling kid**
 - the remap stays until you reboot. to undo it right away: `hidutil property --set '{"UserKeyMapping":[]}'`

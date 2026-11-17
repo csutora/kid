@@ -146,9 +146,17 @@ static CGEventRef caps_released(CGEventTapProxy proxy, CGEventRef event) {
     return tapped ? event : NULL;
 }
 
+// a tap without permission stalls every key press system wide until it times out, so kid exits
+// instead of ever reenabling it
+static void stop(const char *reason) {
+    if (tap) CGEventTapEnable(tap, false);
+    fprintf(stderr, "kid: %s, exiting. run `kid restart` once it's fixed\n", reason);
+    exit(1);
+}
+
 static CGEventRef on_event(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *context) {
-    if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
-        if (type == kCGEventTapDisabledByTimeout) fprintf(stderr, "kid: event tap timed out, reenabling\n");
+    if (type == kCGEventTapDisabledByTimeout) stop("the event tap timed out, likely because a permission was revoked");
+    if (type == kCGEventTapDisabledByUserInput) {
         CGEventTapEnable(tap, true);
         return event;
     }
@@ -215,26 +223,20 @@ static bool start_tap(void) {
 }
 
 static void start(void) {
-    static bool prompted_input, prompted_accessibility;
-    bool keyboards_ready = [keyboards start] == kIOReturnSuccess;
-    if (!keyboards_ready && !prompted_input) {
-        prompted_input = true;
-        fprintf(stderr, "kid: waiting for input monitoring permission\n");
-        IOHIDRequestAccess(kIOHIDRequestTypeListenEvent);
-    }
-    bool tap_ready = start_tap();
-    if (!tap_ready && !prompted_accessibility) {
-        prompted_accessibility = true;
-        fprintf(stderr, "kid: waiting for the device control and data access (accessibility) permission\n");
-        AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef) @{(__bridge NSString *)kAXTrustedCheckOptionPrompt: @YES});
-    }
-    if (keyboards_ready && tap_ready) {
+    bool input = [keyboards start] == kIOReturnSuccess;
+    if (!input && IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)) input = [keyboards start] == kIOReturnSuccess;
+    bool control = AXIsProcessTrusted() && start_tap();
+    if (input && control) {
         fprintf(stderr, "kid: running\n");
         return;
     }
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        start();
-    });
+    if (!input) fprintf(stderr, "kid: missing the input monitoring permission\n");
+    if (!control) {
+        fprintf(stderr, "kid: missing the device control and data access (accessibility) permission\n");
+        AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef) @{(__bridge NSString *)kAXTrustedCheckOptionPrompt: @YES});
+    }
+    fprintf(stderr, "kid: grant it in system settings > privacy & security, then run `kid restart`\n");
+    exit(1);
 }
 
 static NSString *led_status(void) {
