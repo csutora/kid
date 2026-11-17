@@ -1,7 +1,8 @@
 # pinky
 
 makes the caps lock key useful
-hyper on hold, escape on tap, arrow keys, configurable keybindings, caps lock led control.
+
+escape on tap, hyper on hold, hjkl arrow keys, configurable keybindings, caps lock led control.
 
 ## features
 
