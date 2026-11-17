@@ -4,7 +4,7 @@
 #import <IOKit/hid/IOHIDManager.h>
 #include <mach/mach_time.h>
 
-@interface pinky_keyboard : NSObject {
+@interface kid_keyboard : NSObject {
 @public
     IOHIDDeviceRef device;
     IOHIDElementRef caps;
@@ -12,7 +12,7 @@
 }
 @end
 
-@implementation pinky_keyboard
+@implementation kid_keyboard
 
 - (void)dealloc {
     if (caps) CFRelease(caps);
@@ -22,20 +22,20 @@
 
 @end
 
-@implementation pinky_keyboards {
+@implementation kid_keyboards {
     IOHIDManagerRef manager;
-    NSMutableArray<pinky_keyboard *> *keyboards;
+    NSMutableArray<kid_keyboard *> *keyboards;
     uint64_t flash_generation;
     bool flashing;
     bool flash_lit;
 }
 
 static void matched(void *context, IOReturn result, void *sender, IOHIDDeviceRef device) {
-    [(__bridge pinky_keyboards *)context add:device];
+    [(__bridge kid_keyboards *)context add:device];
 }
 
 static void removed(void *context, IOReturn result, void *sender, IOHIDDeviceRef device) {
-    [(__bridge pinky_keyboards *)context remove:device];
+    [(__bridge kid_keyboards *)context remove:device];
 }
 
 - (instancetype)init {
@@ -66,7 +66,7 @@ static void removed(void *context, IOReturn result, void *sender, IOHIDDeviceRef
 }
 
 - (void)add:(IOHIDDeviceRef)device {
-    pinky_keyboard *k = [pinky_keyboard new];
+    kid_keyboard *k = [kid_keyboard new];
     k->device = (IOHIDDeviceRef)CFRetain(device);
     CFArrayRef elements = IOHIDDeviceCopyMatchingElements(device, NULL, kIOHIDOptionsTypeNone);
     for (CFIndex i = 0; elements && i < CFArrayGetCount(elements); i++) {
@@ -97,7 +97,7 @@ static void removed(void *context, IOReturn result, void *sender, IOHIDDeviceRef
 }
 
 - (bool)caps_held {
-    for (pinky_keyboard *k in keyboards) {
+    for (kid_keyboard *k in keyboards) {
         IOHIDValueRef value;
         if (k->caps && IOHIDDeviceGetValue(k->device, k->caps, &value) == kIOReturnSuccess &&
             IOHIDValueGetIntegerValue(value)) {
@@ -143,10 +143,10 @@ static void removed(void *context, IOReturn result, void *sender, IOHIDDeviceRef
 }
 
 - (void)apply_led {
-    for (pinky_keyboard *k in keyboards) [self apply_led_to:k];
+    for (kid_keyboard *k in keyboards) [self apply_led_to:k];
 }
 
-- (void)apply_led_to:(pinky_keyboard *)k {
+- (void)apply_led_to:(kid_keyboard *)k {
     if (!k->led) return;
     bool lit = flashing ? flash_lit : self.led_state;
     CFIndex x = lit ? IOHIDElementGetLogicalMax(k->led) : IOHIDElementGetLogicalMin(k->led);
@@ -155,7 +155,7 @@ static void removed(void *context, IOReturn result, void *sender, IOHIDDeviceRef
     CFRelease(value);
     if (result != kIOReturnSuccess) {
         NSString *name = (__bridge NSString *)IOHIDDeviceGetProperty(k->device, CFSTR(kIOHIDProductKey));
-        fprintf(stderr, "pinky: could not set the caps lock led of %s: 0x%x\n", name.UTF8String ?: "a keyboard", result);
+        fprintf(stderr, "kid: could not set the caps lock led of %s: 0x%x\n", name.UTF8String ?: "a keyboard", result);
     }
 }
 

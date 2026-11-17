@@ -5,7 +5,7 @@ CURRENT_VERSION := $(shell /usr/bin/plutil -extract CFBundleShortVersionString r
 # system actool path (nix shell's xcrun can't find it)
 ACTOOL := /Applications/Xcode.app/Contents/Developer/usr/bin/actool
 
-APP := dist/pinky.app
+APP := dist/kid.app
 SOURCES := $(wildcard src/*.m src/*.c)
 CFLAGS := -fobjc-arc -O2 -Wall -Wextra -Wno-unused-parameter -mmacosx-version-min=14.0
 FRAMEWORKS := -framework Foundation -framework AppKit -framework ApplicationServices -framework IOKit
@@ -13,12 +13,12 @@ FRAMEWORKS := -framework Foundation -framework AppKit -framework ApplicationServ
 build:
 	rm -rf dist
 	mkdir -p $(APP)/Contents/MacOS $(APP)/Contents/Resources
-	$(CC) $(CFLAGS) -DPINKY_VERSION='"$(CURRENT_VERSION)"' -o $(APP)/Contents/MacOS/pinky $(SOURCES) $(FRAMEWORKS)
+	$(CC) $(CFLAGS) -DKID_VERSION='"$(CURRENT_VERSION)"' -o $(APP)/Contents/MacOS/kid $(SOURCES) $(FRAMEWORKS)
 	cp Info.plist $(APP)/Contents/Info.plist
-	if [ -d pinky.icon ]; then \
-		$(ACTOOL) pinky.icon \
+	if [ -d kid.icon ]; then \
+		$(ACTOOL) kid.icon \
 			--compile $(APP)/Contents/Resources \
-			--app-icon pinky \
+			--app-icon kid \
 			--include-all-app-icons \
 			--output-partial-info-plist dist/actool.plist \
 			--output-format human-readable-text \
@@ -45,8 +45,8 @@ release:
 	/usr/bin/plutil -replace CFBundleVersion -string "$$VERSION" Info.plist; \
 	/usr/bin/plutil -replace CFBundleShortVersionString -string "$$VERSION" Info.plist; \
 	$(MAKE) build || exit 1; \
-	TARBALL="pinky-$$VERSION-aarch64-darwin.tar.gz"; \
-	tar -czf "$$TARBALL" -C dist pinky.app; \
+	TARBALL="kid-$$VERSION-aarch64-darwin.tar.gz"; \
+	tar -czf "$$TARBALL" -C dist kid.app; \
 	HASH=$$(nix hash file --type sha256 --sri "$$TARBALL"); \
 	sed -i"" "s|hash = \".*\";|hash = \"$$HASH\";|" flake.nix; \
 	echo "built $$TARBALL"; \

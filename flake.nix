@@ -1,5 +1,5 @@
 {
-  description = "pinky - caps lock as escape and hyper, with keybindings and caps lock led control";
+  description = "kid - caps lock as escape and hyper, with keybindings and caps lock led control";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -14,11 +14,11 @@
 
       # the release tarball holds an app bundle signed with a stable identity, so
       # macos keeps the accessibility and input monitoring grants across updates
-      url = "https://github.com/csutora/pinky/releases/download/v${version}/pinky-${version}-aarch64-darwin.tar.gz";
-      hash = "sha256-QkgiostiMsQnXKuzEursDUvePE79f7heYB7y/Kl5o24=";
+      url = "https://github.com/csutora/kid/releases/download/v${version}/kid-${version}-aarch64-darwin.tar.gz";
+      hash = "sha256-9jAF/x9JCLOXmLpX9ZtymvlZLo4qSuuIM3gtG9va7Gs=";
 
-      mkPinky = pkgs: pkgs.stdenv.mkDerivation {
-        pname = "pinky";
+      mkKid = pkgs: pkgs.stdenv.mkDerivation {
+        pname = "kid";
         inherit version;
         src = pkgs.fetchurl { inherit url hash; };
 
@@ -33,23 +33,23 @@
 
         installPhase = ''
           mkdir -p $out/Applications $out/bin
-          cp -R pinky.app $out/Applications/
-          ln -s $out/Applications/pinky.app/Contents/MacOS/pinky $out/bin/pinky
+          cp -R kid.app $out/Applications/
+          ln -s $out/Applications/kid.app/Contents/MacOS/kid $out/bin/kid
         '';
 
         meta = {
           description = "caps lock as escape and hyper, with keybindings and caps lock led control";
-          homepage = "https://github.com/csutora/pinky";
+          homepage = "https://github.com/csutora/kid";
           license = pkgs.lib.licenses.mit;
           platforms = systems;
-          mainProgram = "pinky";
+          mainProgram = "kid";
         };
       };
     in
     {
       packages = forAll (pkgs: rec {
-        pinky = mkPinky pkgs;
-        default = pinky;
+        kid = mkKid pkgs;
+        default = kid;
       });
 
       devShells = forAll (pkgs: {
@@ -66,7 +66,7 @@
       });
 
       overlays.default = final: prev: {
-        pinky = self.packages.${prev.stdenv.hostPlatform.system}.pinky;
+        kid = self.packages.${prev.stdenv.hostPlatform.system}.kid;
       };
 
       homeModules.default = import ./nix/home-module.nix self;

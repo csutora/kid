@@ -37,7 +37,7 @@ static side_t side_merge(side_t a, side_t b) {
     return side_both;
 }
 
-@implementation pinky_binding
+@implementation kid_binding
 
 - (bool)matches_key:(CGKeyCode)code modifiers:(modifiers_t)mods app:(NSString *)app {
     if (code != key || mods.hyper != hyper) return false;
@@ -49,10 +49,10 @@ static side_t side_merge(side_t a, side_t b) {
 
 @end
 
-@implementation pinky_config
+@implementation kid_config
 
 + (NSString *)default_path {
-    return [NSHomeDirectory() stringByAppendingPathComponent:@".config/pinky/config.json"];
+    return [NSHomeDirectory() stringByAppendingPathComponent:@".config/kid/config.json"];
 }
 
 static id fail(NSString **error, NSString *format, ...) NS_FORMAT_FUNCTION(2, 3);
@@ -78,7 +78,7 @@ static bool parse_key(id value, CGKeyCode *code) {
 }
 
 + (instancetype)load:(NSString *)path optional:(bool)optional error:(NSString **)error {
-    pinky_config *config = [pinky_config new];
+    kid_config *config = [kid_config new];
     NSData *data = [NSData dataWithContentsOfFile:path];
     if (!data) {
         if (optional && ![NSFileManager.defaultManager fileExistsAtPath:path]) return config;
@@ -123,7 +123,7 @@ static bool parse_key(id value, CGKeyCode *code) {
         NSMutableArray *parsed = [NSMutableArray array];
         NSUInteger i = 0;
         for (id entry in bindings) {
-            pinky_binding *b = [pinky_binding new];
+            kid_binding *b = [kid_binding new];
             if (![entry isKindOfClass:NSDictionary.class]) return fail(error, @"bindings[%lu]: expected an object", i);
             for (NSString *field in entry) {
                 if (![@[@"key", @"modifiers", @"command", @"unless_apps"] containsObject:field]) {

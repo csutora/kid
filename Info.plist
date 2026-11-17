@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>pinky</string>
+	<string>kid</string>
 	<key>CFBundleExecutable</key>
-	<string>pinky</string>
+	<string>kid</string>
 	<key>CFBundleIconFile</key>
-	<string>pinky</string>
+	<string>kid</string>
 	<key>CFBundleIconName</key>
-	<string>pinky</string>
+	<string>kid</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.csutora.pinky</string>
+	<string>com.csutora.kid</string>
 	<key>CFBundleName</key>
-	<string>pinky</string>
+	<string>kid</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

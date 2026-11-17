@@ -5,19 +5,19 @@
 #import "ipc.h"
 
 static const char *usage =
-    "pinky " PINKY_VERSION "\n"
+    "kid " KID_VERSION "\n"
     "caps lock as escape and hyper, with keybindings and caps lock led control\n"
     "\n"
     "usage:\n"
-    "  pinky daemon [--config <path>]   run the daemon\n"
-    "  pinky check [<path>]             validate a config file\n"
-    "  pinky led [on|off|auto]          show or set the caps lock led override\n"
-    "  pinky led flash [--times <n>] [--speed <x>]\n"
+    "  kid daemon [--config <path>]   run the daemon\n"
+    "  kid check [<path>]             validate a config file\n"
+    "  kid led [on|off|auto]          show or set the caps lock led override\n"
+    "  kid led flash [--times <n>] [--speed <x>]\n"
     "                                   flash the led, then return to its state.\n"
     "                                   defaults to 2 times at speed 1\n"
-    "  pinky version                    print the version\n"
+    "  kid version                    print the version\n"
     "\n"
-    "the config defaults to ~/.config/pinky/config.json\n";
+    "the config defaults to ~/.config/kid/config.json\n";
 
 static int fail_usage(void) {
     fputs(usage, stderr);
@@ -26,8 +26,8 @@ static int fail_usage(void) {
 
 static int check(NSString *path) {
     NSString *error;
-    if (![pinky_config load:path optional:false error:&error]) {
-        fprintf(stderr, "pinky: %s\n", error.UTF8String);
+    if (![kid_config load:path optional:false error:&error]) {
+        fprintf(stderr, "kid: %s\n", error.UTF8String);
         return 1;
     }
     return 0;
@@ -62,18 +62,18 @@ static int led(NSArray<NSString *> *args) {
     }
     NSString *response = ipc_request(request);
     if (!response) {
-        fprintf(stderr, "pinky: could not reach the daemon at %s\n", ipc_socket_path().UTF8String);
+        fprintf(stderr, "kid: could not reach the daemon at %s\n", ipc_socket_path().UTF8String);
         return 1;
     }
     NSDictionary *json = [NSJSONSerialization JSONObjectWithData:[response dataUsingEncoding:NSUTF8StringEncoding]
                                                          options:0
                                                            error:nil];
     if (![json isKindOfClass:NSDictionary.class]) {
-        fprintf(stderr, "pinky: unexpected response from the daemon: %s\n", response.UTF8String);
+        fprintf(stderr, "kid: unexpected response from the daemon: %s\n", response.UTF8String);
         return 1;
     }
     if (json[@"error"]) {
-        fprintf(stderr, "pinky: %s\n", [json[@"error"] description].UTF8String);
+        fprintf(stderr, "kid: %s\n", [json[@"error"] description].UTF8String);
         return 1;
     }
     if (!args.count) puts(response.UTF8String);
@@ -91,15 +91,15 @@ int main(int argc, char **argv) {
         if ([command isEqualToString:@"daemon"]) {
             if (args.count == 2 && [args[0] isEqualToString:@"--config"]) return daemon_main(args[1], false);
             if (args.count) return fail_usage();
-            return daemon_main(pinky_config.default_path, true);
+            return daemon_main(kid_config.default_path, true);
         }
         if ([command isEqualToString:@"check"]) {
             if (args.count > 1) return fail_usage();
-            return check(args.count ? args[0] : pinky_config.default_path);
+            return check(args.count ? args[0] : kid_config.default_path);
         }
         if ([command isEqualToString:@"led"]) return led(args);
         if ([command isEqualToString:@"version"] || [command isEqualToString:@"--version"]) {
-            puts(PINKY_VERSION);
+            puts(KID_VERSION);
             return 0;
         }
         if ([command isEqualToString:@"help"] || [command isEqualToString:@"--help"] || [command isEqualToString:@"-h"]) {

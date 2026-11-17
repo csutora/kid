@@ -1,32 +1,32 @@
 flake: { config, lib, pkgs, ... }:
 
 let
-  cfg = config.services.pinky;
+  cfg = config.services.kid;
   settingsFormat = pkgs.formats.json { };
 
-  configFile = pkgs.runCommand "pinky-config.json" {
-    unchecked = settingsFormat.generate "pinky-config-unchecked.json" cfg.settings;
+  configFile = pkgs.runCommand "kid-config.json" {
+    unchecked = settingsFormat.generate "kid-config-unchecked.json" cfg.settings;
   } ''
     ${lib.getExe cfg.package} check $unchecked
     cp $unchecked $out
   '';
 in
 {
-  options.services.pinky = {
-    enable = lib.mkEnableOption "pinky, caps lock as escape and hyper, with keybindings and caps lock led control";
+  options.services.kid = {
+    enable = lib.mkEnableOption "kid, caps lock as escape and hyper, with keybindings and caps lock led control";
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = flake.packages.${pkgs.stdenv.hostPlatform.system}.pinky;
-      defaultText = lib.literalExpression "inputs.pinky.packages.\${system}.pinky";
-      description = "the pinky package to use.";
+      default = flake.packages.${pkgs.stdenv.hostPlatform.system}.kid;
+      defaultText = lib.literalExpression "inputs.kid.packages.\${system}.kid";
+      description = "the kid package to use.";
     };
 
     settings = lib.mkOption {
       type = settingsFormat.type;
       default = { };
       description = ''
-        pinky configuration, serialized to json and validated with `pinky check` at build time.
+        kid configuration, serialized to json and validated with `kid check` at build time.
       '';
       example = lib.literalExpression ''
         {
@@ -56,19 +56,19 @@ in
 
   config = lib.mkIf cfg.enable {
     assertions = [
-      (lib.hm.assertions.assertPlatform "services.pinky" pkgs lib.platforms.darwin)
+      (lib.hm.assertions.assertPlatform "services.kid" pkgs lib.platforms.darwin)
     ];
 
     home.packages = [ cfg.package ];
 
-    home.file."Applications/pinky.app".source = "${cfg.package}/Applications/pinky.app";
+    home.file."Applications/kid.app".source = "${cfg.package}/Applications/kid.app";
 
-    launchd.agents.pinky = {
+    launchd.agents.kid = {
       enable = true;
       config = {
-        Label = "com.csutora.pinky";
+        Label = "com.csutora.kid";
         ProgramArguments = [
-          "${cfg.package}/Applications/pinky.app/Contents/MacOS/pinky"
+          "${cfg.package}/Applications/kid.app/Contents/MacOS/kid"
           "daemon"
           "--config"
           "${configFile}"
@@ -78,8 +78,8 @@ in
           SuccessfulExit = false;
         };
         ProcessType = "Interactive";
-        StandardOutPath = "${config.home.homeDirectory}/Library/Logs/pinky.log";
-        StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/pinky.log";
+        StandardOutPath = "${config.home.homeDirectory}/Library/Logs/kid.log";
+        StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/kid.log";
       };
     };
   };

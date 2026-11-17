@@ -8,7 +8,7 @@
 static const size_t max_message = 4096;
 
 NSString *ipc_socket_path(void) {
-    return [NSTemporaryDirectory() stringByAppendingPathComponent:@"pinky.sock"];
+    return [NSTemporaryDirectory() stringByAppendingPathComponent:@"kid.sock"];
 }
 
 static bool socket_address(struct sockaddr_un *addr) {
@@ -69,7 +69,7 @@ bool ipc_serve(NSString *(^handler)(NSString *request)) {
         return false;
     }
 
-    dispatch_queue_t queue = dispatch_queue_create("pinky.ipc", DISPATCH_QUEUE_SERIAL);
+    dispatch_queue_t queue = dispatch_queue_create("kid.ipc", DISPATCH_QUEUE_SERIAL);
     source = dispatch_source_create(DISPATCH_SOURCE_TYPE_READ, fd, 0, queue);
     dispatch_source_set_event_handler(source, ^{
         int client = accept(fd, NULL, NULL);

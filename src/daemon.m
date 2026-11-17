@@ -32,8 +32,8 @@ static const double flash_interval_ms = 200;
 
 static NSString *config_path;
 static bool config_optional;
-static pinky_config *config;
-static pinky_keyboards *keyboards;
+static kid_config *config;
+static kid_keyboards *keyboards;
 static NSString *frontmost_app;
 static CFMachPortRef tap;
 static IOHIDEventSystemClientRef hid_client;
@@ -59,7 +59,7 @@ static void remap_caps_lock(void) {
         @kIOHIDKeyboardModifierMappingDstKey: @0x700000029,
     }];
     if (!IOHIDEventSystemClientSetProperty(hid_client, CFSTR(kIOHIDUserKeyUsageMapKey), (__bridge CFArrayRef)mapping)) {
-        fprintf(stderr, "pinky: could not remap caps lock to escape\n");
+        fprintf(stderr, "kid: could not remap caps lock to escape\n");
     }
 }
 
@@ -107,15 +107,15 @@ static void run(NSString *command) {
         pid_t pid;
         char *argv[] = {"/bin/sh", "-c", (char *)command.UTF8String, NULL};
         int result = posix_spawn(&pid, argv[0], &actions, &attr, argv, environ);
-        if (result) fprintf(stderr, "pinky: could not run `%s`: %s\n", command.UTF8String, strerror(result));
+        if (result) fprintf(stderr, "kid: could not run `%s`: %s\n", command.UTF8String, strerror(result));
 
         posix_spawn_file_actions_destroy(&actions);
         posix_spawnattr_destroy(&attr);
     });
 }
 
-static pinky_binding *find_binding(CGKeyCode code, modifiers_t mods) {
-    for (pinky_binding *b in config.bindings) {
+static kid_binding *find_binding(CGKeyCode code, modifiers_t mods) {
+    for (kid_binding *b in config.bindings) {
         if ([b matches_key:code modifiers:mods app:frontmost_app]) return b;
     }
     return nil;
@@ -148,7 +148,7 @@ static CGEventRef caps_released(CGEventTapProxy proxy, CGEventRef event) {
 
 static CGEventRef on_event(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *context) {
     if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
-        if (type == kCGEventTapDisabledByTimeout) fprintf(stderr, "pinky: event tap timed out, reenabling\n");
+        if (type == kCGEventTapDisabledByTimeout) fprintf(stderr, "kid: event tap timed out, reenabling\n");
         CGEventTapEnable(tap, true);
         return event;
     }
@@ -173,7 +173,7 @@ static CGEventRef on_event(CGEventTapProxy proxy, CGEventType type, CGEventRef e
 
     key_state_t state = key_states[code];
     if (down && !repeat) {
-        pinky_binding *binding;
+        kid_binding *binding;
         if (caps_down) caps_used = true;
         if (caps_down && config->layer[code] >= 0) {
             state = key_layer;
@@ -219,17 +219,17 @@ static void start(void) {
     bool keyboards_ready = [keyboards start] == kIOReturnSuccess;
     if (!keyboards_ready && !prompted_input) {
         prompted_input = true;
-        fprintf(stderr, "pinky: waiting for input monitoring permission\n");
+        fprintf(stderr, "kid: waiting for input monitoring permission\n");
         IOHIDRequestAccess(kIOHIDRequestTypeListenEvent);
     }
     bool tap_ready = start_tap();
     if (!tap_ready && !prompted_accessibility) {
         prompted_accessibility = true;
-        fprintf(stderr, "pinky: waiting for accessibility permission\n");
+        fprintf(stderr, "kid: waiting for the device control and data access (accessibility) permission\n");
         AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef) @{(__bridge NSString *)kAXTrustedCheckOptionPrompt: @YES});
     }
     if (keyboards_ready && tap_ready) {
-        fprintf(stderr, "pinky: running\n");
+        fprintf(stderr, "kid: running\n");
         return;
     }
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
@@ -268,13 +268,13 @@ static NSString *handle(NSString *request) {
 
 static void reload(void) {
     NSString *error;
-    pinky_config *next = [pinky_config load:config_path optional:config_optional error:&error];
+    kid_config *next = [kid_config load:config_path optional:config_optional error:&error];
     if (!next) {
-        fprintf(stderr, "pinky: keeping the previous config, %s\n", error.UTF8String);
+        fprintf(stderr, "kid: keeping the previous config, %s\n", error.UTF8String);
         return;
     }
     config = next;
-    fprintf(stderr, "pinky: config reloaded\n");
+    fprintf(stderr, "kid: config reloaded\n");
 }
 
 int daemon_main(NSString *path, bool optional) {
@@ -285,21 +285,21 @@ int daemon_main(NSString *path, bool optional) {
     config_path = path;
     config_optional = optional;
     NSString *error;
-    config = [pinky_config load:config_path optional:config_optional error:&error];
+    config = [kid_config load:config_path optional:config_optional error:&error];
     if (!config) {
-        fprintf(stderr, "pinky: %s\n", error.UTF8String);
+        fprintf(stderr, "kid: %s\n", error.UTF8String);
         return 1;
     }
 
     remap_caps_lock();
 
-    keyboards = [pinky_keyboards new];
+    keyboards = [kid_keyboards new];
     keyboards.on_added = ^{
         remap_caps_lock();
     };
 
     if (!ipc_serve(^(NSString *request) { return handle(request); })) {
-        fprintf(stderr, "pinky: could not listen on %s: %s\n", ipc_socket_path().UTF8String, strerror(errno));
+        fprintf(stderr, "kid: could not listen on %s: %s\n", ipc_socket_path().UTF8String, strerror(errno));
         return 1;
     }
 

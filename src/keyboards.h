@@ -8,7 +8,7 @@ typedef enum {
     led_off,
 } led_override_t;
 
-@interface pinky_keyboards : NSObject
+@interface kid_keyboards : NSObject
 @property(nonatomic) led_override_t led_override;
 @property(copy) void (^on_added)(void);
 - (IOReturn)start;

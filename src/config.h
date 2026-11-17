@@ -25,7 +25,7 @@ typedef struct {
     bool right[mod_count];
 } modifiers_t;
 
-@interface pinky_binding : NSObject {
+@interface kid_binding : NSObject {
 @public
     CGKeyCode key;
     bool hyper;
@@ -36,12 +36,12 @@ typedef struct {
 - (bool)matches_key:(CGKeyCode)code modifiers:(modifiers_t)mods app:(NSString *)app;
 @end
 
-@interface pinky_config : NSObject {
+@interface kid_config : NSObject {
 @public
     uint64_t tap_timeout_ms;
     int layer[128];
 }
-@property(copy) NSArray<pinky_binding *> *bindings;
+@property(copy) NSArray<kid_binding *> *bindings;
 + (NSString *)default_path;
 + (instancetype)load:(NSString *)path optional:(bool)optional error:(NSString **)error;
 @end
