@@ -2,8 +2,6 @@
 
 makes the caps lock key useful
 
-escape on tap, hyper on hold, hjkl arrow keys, configurable keybindings, caps lock led control.
-
 ## features
 
 - escape on tap, hyper (cmd+ctrl+opt+shift) on hold
