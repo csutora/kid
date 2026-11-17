@@ -15,4 +15,5 @@ typedef enum {
 - (bool)caps_held;
 - (bool)led_state;
 - (void)apply_led;
+- (void)flash:(unsigned)times interval_ms:(double)interval;
 @end

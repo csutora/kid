@@ -10,12 +10,12 @@
       systems = [ "aarch64-darwin" ];
       forAll = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
-      version = "0.1.0";
+      version = "0.2.0";
 
       # the release tarball holds an app bundle signed with a stable identity, so
       # macos keeps the accessibility and input monitoring grants across updates
       url = "https://github.com/csutora/pinky/releases/download/v${version}/pinky-${version}-aarch64-darwin.tar.gz";
-      hash = "sha256-tT5rGZ9zTVd6JjXvoqW5N8zwGslpXG9cXUlUXltiSl0=";
+      hash = "sha256-QkgiostiMsQnXKuzEursDUvePE79f7heYB7y/Kl5o24=";
 
       mkPinky = pkgs: pkgs.stdenv.mkDerivation {
         pname = "pinky";

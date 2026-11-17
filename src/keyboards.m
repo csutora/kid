@@ -25,6 +25,9 @@
 @implementation pinky_keyboards {
     IOHIDManagerRef manager;
     NSMutableArray<pinky_keyboard *> *keyboards;
+    uint64_t flash_generation;
+    bool flashing;
+    bool flash_lit;
 }
 
 static void matched(void *context, IOReturn result, void *sender, IOHIDDeviceRef device) {
@@ -118,13 +121,35 @@ static void removed(void *context, IOReturn result, void *sender, IOHIDDeviceRef
     [self apply_led];
 }
 
+- (void)flash:(unsigned)times interval_ms:(double)interval {
+    uint64_t generation = ++flash_generation;
+    bool base = self.led_state;
+    flashing = true;
+    [self flash_step:0 of:times * 2 base:base interval_ms:interval generation:generation];
+}
+
+- (void)flash_step:(unsigned)step of:(unsigned)steps base:(bool)base interval_ms:(double)interval generation:(uint64_t)generation {
+    if (generation != flash_generation) return;
+    if (step == steps) {
+        flashing = false;
+        [self apply_led];
+        return;
+    }
+    flash_lit = step % 2 ? base : !base;
+    [self apply_led];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(interval * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
+        [self flash_step:step + 1 of:steps base:base interval_ms:interval generation:generation];
+    });
+}
+
 - (void)apply_led {
     for (pinky_keyboard *k in keyboards) [self apply_led_to:k];
 }
 
 - (void)apply_led_to:(pinky_keyboard *)k {
     if (!k->led) return;
-    CFIndex x = self.led_state ? IOHIDElementGetLogicalMax(k->led) : IOHIDElementGetLogicalMin(k->led);
+    bool lit = flashing ? flash_lit : self.led_state;
+    CFIndex x = lit ? IOHIDElementGetLogicalMax(k->led) : IOHIDElementGetLogicalMin(k->led);
     IOHIDValueRef value = IOHIDValueCreateWithIntegerValue(kCFAllocatorDefault, k->led, mach_absolute_time(), x);
     IOReturn result = IOHIDDeviceSetValue(k->device, k->led, value);
     CFRelease(value);

@@ -12,6 +12,9 @@ static const char *usage =
     "  pinky daemon [--config <path>]   run the daemon\n"
     "  pinky check [<path>]             validate a config file\n"
     "  pinky led [on|off|auto]          show or set the caps lock led override\n"
+    "  pinky led flash [--times <n>] [--speed <x>]\n"
+    "                                   flash the led, then return to its state.\n"
+    "                                   defaults to 2 times at speed 1\n"
     "  pinky version                    print the version\n"
     "\n"
     "the config defaults to ~/.config/pinky/config.json\n";
@@ -30,9 +33,33 @@ static int check(NSString *path) {
     return 0;
 }
 
+static NSString *flash_request(NSArray<NSString *> *args) {
+    long times = 2;
+    double speed = 1;
+    for (NSUInteger i = 0; i < args.count; i += 2) {
+        if (i + 1 >= args.count) return nil;
+        NSScanner *scanner = [NSScanner scannerWithString:args[i + 1]];
+        if ([args[i] isEqualToString:@"--times"]) {
+            if (![scanner scanInteger:&times] || !scanner.atEnd) return nil;
+        } else if ([args[i] isEqualToString:@"--speed"]) {
+            if (![scanner scanDouble:&speed] || !scanner.atEnd) return nil;
+        } else {
+            return nil;
+        }
+    }
+    return [NSString stringWithFormat:@"led flash %ld %g", times, speed];
+}
+
 static int led(NSArray<NSString *> *args) {
-    if (args.count > 1) return fail_usage();
-    NSString *request = args.count ? [@"led " stringByAppendingString:args[0]] : @"led";
+    NSString *request = @"led";
+    if (args.count && [args[0] isEqualToString:@"flash"]) {
+        request = flash_request([args subarrayWithRange:NSMakeRange(1, args.count - 1)]);
+        if (!request) return fail_usage();
+    } else if (args.count == 1) {
+        request = [@"led " stringByAppendingString:args[0]];
+    } else if (args.count) {
+        return fail_usage();
+    }
     NSString *response = ipc_request(request);
     if (!response) {
         fprintf(stderr, "pinky: could not reach the daemon at %s\n", ipc_socket_path().UTF8String);

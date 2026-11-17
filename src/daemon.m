@@ -28,6 +28,8 @@ static const CGEventFlags hyper_flags =
     kCGEventFlagMaskCommand | kCGEventFlagMaskControl | kCGEventFlagMaskAlternate | kCGEventFlagMaskShift |
     NX_DEVICELCMDKEYMASK | NX_DEVICELCTLKEYMASK | NX_DEVICELALTKEYMASK | NX_DEVICELSHIFTKEYMASK;
 
+static const double flash_interval_ms = 200;
+
 static NSString *config_path;
 static bool config_optional;
 static pinky_config *config;
@@ -243,6 +245,15 @@ static NSString *led_status(void) {
 
 static NSString *handle(NSString *request) {
     NSArray<NSString *> *words = [request componentsSeparatedByString:@" "];
+    if (words.count == 4 && [words[0] isEqualToString:@"led"] && [words[1] isEqualToString:@"flash"]) {
+        int times = words[2].intValue;
+        double speed = words[3].doubleValue;
+        if (times < 1 || times > 100 || !(speed > 0) || speed > 100) {
+            return @"{\"error\":\"expected 1 to 100 flashes and a speed above 0 and up to 100\"}";
+        }
+        [keyboards flash:times interval_ms:flash_interval_ms / speed];
+        return led_status();
+    }
     if (![words.firstObject isEqualToString:@"led"] || words.count > 2) {
         return @"{\"error\":\"unknown request\"}";
     }

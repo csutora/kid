@@ -116,7 +116,12 @@ pinky led on     # force the led on
 pinky led off    # force the led off
 pinky led auto   # follow the caps lock state again
 pinky led        # show the override and the led state as json
+
+pinky led flash                       # flash twice, then return to the previous state
+pinky led flash --times 3 --speed 2   # flash three times, twice as fast
 ```
+
+flashing inverts the led and back, so it always ends where it started. it also handles overlapping flashes and on-off requests nicely.
 
 the override applies to every keyboard with a caps lock led, including ones connected later. it isn't persisted, so it resets to `auto` when the daemon restarts.
 
