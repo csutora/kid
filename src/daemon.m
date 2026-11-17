@@ -28,6 +28,16 @@ static const CGEventFlags hyper_flags =
     kCGEventFlagMaskCommand | kCGEventFlagMaskControl | kCGEventFlagMaskAlternate | kCGEventFlagMaskShift |
     NX_DEVICELCMDKEYMASK | NX_DEVICELCTLKEYMASK | NX_DEVICELALTKEYMASK | NX_DEVICELSHIFTKEYMASK;
 
+static const struct {
+    CGKeyCode code;
+    CGEventFlags flags;
+} hyper_keys[] = {
+    {56, kCGEventFlagMaskShift | NX_DEVICELSHIFTKEYMASK},
+    {59, kCGEventFlagMaskControl | NX_DEVICELCTLKEYMASK},
+    {58, kCGEventFlagMaskAlternate | NX_DEVICELALTKEYMASK},
+    {55, kCGEventFlagMaskCommand | NX_DEVICELCMDKEYMASK},
+};
+
 static const double flash_interval_ms = 200;
 
 static NSString *config_path;
@@ -45,6 +55,7 @@ static bool caps_down;
 static bool caps_used;
 static uint64_t caps_since;
 static CGEventRef caps_event;
+static bool hyper_held;
 
 static uint64_t elapsed_ms(uint64_t since) {
     static mach_timebase_info_data_t timebase;
@@ -136,8 +147,35 @@ static CGEventRef remap(CGEventRef event, CGKeyCode target, bool down) {
     return out;
 }
 
+// apps that track modifiers through flags changed events (like sdl) ignore the flags on key events, so
+// hyper also presses and releases the modifiers themselves. the system state includes these, so the
+// physically held ones are read from the keyboards instead
+static void set_hyper(CGEventTapProxy proxy, bool held) {
+    if (held == hyper_held) return;
+    hyper_held = held;
+    CGEventFlags physical = [keyboards held_modifiers] |
+                            (CGEventSourceFlagsState(kCGEventSourceStateHIDSystemState) & kCGEventFlagMaskSecondaryFn);
+    CGEventFlags synthetic = held ? 0 : hyper_flags;
+    size_t count = sizeof hyper_keys / sizeof *hyper_keys;
+    for (size_t i = 0; i < count; i++) {
+        size_t k = held ? i : count - 1 - i;
+        synthetic = held ? synthetic | hyper_keys[k].flags : synthetic & ~hyper_keys[k].flags;
+        CGEventRef event = CGEventCreateKeyboardEvent(NULL, hyper_keys[k].code, held);
+        if (!event) continue;
+        CGEventSetType(event, kCGEventFlagsChanged);
+        CGEventSetFlags(event, physical | synthetic);
+        if (proxy) {
+            CGEventTapPostEvent(proxy, event);
+        } else {
+            CGEventPost(kCGHIDEventTap, event);
+        }
+        CFRelease(event);
+    }
+}
+
 static CGEventRef caps_released(CGEventTapProxy proxy, CGEventRef event) {
     caps_down = false;
+    set_hyper(proxy, false);
     CGEventRef down = caps_event;
     caps_event = NULL;
     bool tapped = !caps_used && elapsed_ms(caps_since) <= config->tap_timeout_ms;
@@ -150,6 +188,7 @@ static CGEventRef caps_released(CGEventTapProxy proxy, CGEventRef event) {
 // instead of ever reenabling it
 static void stop(const char *reason) {
     if (tap) CGEventTapEnable(tap, false);
+    set_hyper(NULL, false);
     fprintf(stderr, "kid: %s, exiting. run `kid restart` once it's fixed\n", reason);
     exit(1);
 }
@@ -161,6 +200,10 @@ static CGEventRef on_event(CGEventTapProxy proxy, CGEventType type, CGEventRef e
         return event;
     }
 
+    if (type == kCGEventFlagsChanged) {
+        if (hyper_held) CGEventSetFlags(event, CGEventGetFlags(event) | hyper_flags);
+        return event;
+    }
     if (type != kCGEventKeyDown && type != kCGEventKeyUp) return event;
     CGKeyCode code = (CGKeyCode)CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
     if (code >= 128) return event;
@@ -193,6 +236,8 @@ static CGEventRef on_event(CGEventTapProxy proxy, CGEventType type, CGEventRef e
             state = caps_down ? key_hyper : key_passthrough;
         }
         key_states[code] = state;
+        if (state == key_hyper) set_hyper(proxy, true);
+        if (state == key_layer) set_hyper(proxy, false);
     } else if (!down) {
         key_states[code] = key_passthrough;
     }
@@ -213,7 +258,7 @@ static CGEventRef on_event(CGEventTapProxy proxy, CGEventType type, CGEventRef e
 
 static bool start_tap(void) {
     if (tap) return true;
-    CGEventMask mask = CGEventMaskBit(kCGEventKeyDown) | CGEventMaskBit(kCGEventKeyUp);
+    CGEventMask mask = CGEventMaskBit(kCGEventKeyDown) | CGEventMaskBit(kCGEventKeyUp) | CGEventMaskBit(kCGEventFlagsChanged);
     tap = CGEventTapCreate(kCGHIDEventTap, kCGHeadInsertEventTap, kCGEventTapOptionDefault, mask, on_event, NULL);
     if (!tap) return false;
     CFRunLoopSourceRef source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0);

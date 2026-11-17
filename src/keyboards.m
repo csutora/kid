@@ -2,6 +2,7 @@
 
 #import <CoreGraphics/CoreGraphics.h>
 #import <IOKit/hid/IOHIDManager.h>
+#import <IOKit/hidsystem/IOLLEvent.h>
 #include <mach/mach_time.h>
 
 @interface kid_keyboard : NSObject {
@@ -9,6 +10,7 @@
     IOHIDDeviceRef device;
     IOHIDElementRef caps;
     IOHIDElementRef led;
+    IOHIDElementRef modifiers[8];
 }
 @end
 
@@ -17,10 +19,24 @@
 - (void)dealloc {
     if (caps) CFRelease(caps);
     if (led) CFRelease(led);
+    for (int i = 0; i < 8; i++) {
+        if (modifiers[i]) CFRelease(modifiers[i]);
+    }
     CFRelease(device);
 }
 
 @end
+
+static const CGEventFlags modifier_flags[8] = {
+    kCGEventFlagMaskControl | NX_DEVICELCTLKEYMASK,
+    kCGEventFlagMaskShift | NX_DEVICELSHIFTKEYMASK,
+    kCGEventFlagMaskAlternate | NX_DEVICELALTKEYMASK,
+    kCGEventFlagMaskCommand | NX_DEVICELCMDKEYMASK,
+    kCGEventFlagMaskControl | NX_DEVICERCTLKEYMASK,
+    kCGEventFlagMaskShift | NX_DEVICERSHIFTKEYMASK,
+    kCGEventFlagMaskAlternate | NX_DEVICERALTKEYMASK,
+    kCGEventFlagMaskCommand | NX_DEVICERCMDKEYMASK,
+};
 
 @implementation kid_keyboards {
     IOHIDManagerRef manager;
@@ -75,6 +91,10 @@ static void removed(void *context, IOReturn result, void *sender, IOHIDDeviceRef
         if (!k->caps && page == kHIDPage_KeyboardOrKeypad && usage == kHIDUsage_KeyboardCapsLock &&
             IOHIDElementGetType(e) != kIOHIDElementTypeOutput) {
             k->caps = (IOHIDElementRef)CFRetain(e);
+        } else if (page == kHIDPage_KeyboardOrKeypad && usage >= kHIDUsage_KeyboardLeftControl &&
+                   usage <= kHIDUsage_KeyboardRightGUI && IOHIDElementGetType(e) != kIOHIDElementTypeOutput &&
+                   !k->modifiers[usage - kHIDUsage_KeyboardLeftControl]) {
+            k->modifiers[usage - kHIDUsage_KeyboardLeftControl] = (IOHIDElementRef)CFRetain(e);
         } else if (!k->led && page == kHIDPage_LEDs && usage == kHIDUsage_LED_CapsLock &&
                    IOHIDElementGetType(e) == kIOHIDElementTypeOutput) {
             k->led = (IOHIDElementRef)CFRetain(e);
@@ -105,6 +125,20 @@ static void removed(void *context, IOReturn result, void *sender, IOHIDDeviceRef
         }
     }
     return false;
+}
+
+- (CGEventFlags)held_modifiers {
+    CGEventFlags flags = 0;
+    for (kid_keyboard *k in keyboards) {
+        for (int i = 0; i < 8; i++) {
+            IOHIDValueRef value;
+            if (k->modifiers[i] && IOHIDDeviceGetValue(k->device, k->modifiers[i], &value) == kIOReturnSuccess &&
+                IOHIDValueGetIntegerValue(value)) {
+                flags |= modifier_flags[i];
+            }
+        }
+    }
+    return flags;
 }
 
 - (bool)led_state {

@@ -1,5 +1,6 @@
 #pragma once
 
+#import <CoreGraphics/CoreGraphics.h>
 #import <Foundation/Foundation.h>
 
 typedef enum {
@@ -13,6 +14,7 @@ typedef enum {
 @property(copy) void (^on_added)(void);
 - (IOReturn)start;
 - (bool)caps_held;
+- (CGEventFlags)held_modifiers;
 - (bool)led_state;
 - (void)apply_led;
 - (void)flash:(unsigned)times interval_ms:(double)interval;
